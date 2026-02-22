@@ -50,7 +50,8 @@ DEFAULT_SETTINGS = {
     'purity_nsfw': 'false',
     'sort_index': '5',
     'resolution_index': '0',
-    'ratio_index': '0'
+    'ratio_index': '0',
+    'copy_to_gnome_backgrounds': 'false',
 }
 
 

@@ -76,6 +76,20 @@ class SettingsWindow(Gtk.Window):
 
         vbox.append(Gtk.Separator())
 
+        # Копировать в меню обоев GNOME при сохранении
+        hbox_gnome = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        vbox.append(hbox_gnome)
+        lbl_gnome = Gtk.Label(label="Копировать в меню обоев GNOME при сохранении:", xalign=0)
+        lbl_gnome.set_hexpand(True)
+        lbl_gnome.set_wrap(True)
+        hbox_gnome.append(lbl_gnome)
+        self.switch_gnome_bg = Gtk.Switch()
+        self.switch_gnome_bg.set_active(self.current_settings.get('copy_to_gnome_backgrounds', 'false') == 'true')
+        self.switch_gnome_bg.set_valign(Gtk.Align.CENTER)
+        hbox_gnome.append(self.switch_gnome_bg)
+
+        vbox.append(Gtk.Separator())
+
         btn_save = Gtk.Button(label="Сохранить настройки")
         btn_save.add_css_class("suggested-action")
         btn_save.connect("clicked", self.on_save_clicked)
@@ -105,7 +119,8 @@ class SettingsWindow(Gtk.Window):
         new_app_settings = {
             'api_key': self.entry_api.get_text().strip(),
             'download_path': self.entry_path.get_text().strip(),
-            'columns': str(int(self.spin_cols.get_value()))
+            'columns': str(int(self.spin_cols.get_value())),
+            'copy_to_gnome_backgrounds': 'true' if self.switch_gnome_bg.get_active() else 'false',
         }
 
         current_search_state = self.parent_window.get_current_search_state()

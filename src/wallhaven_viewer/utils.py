@@ -104,6 +104,27 @@ def get_sidecar_path_for_image(image_path):
     return os.path.join(meta_dir, key + ".json")
 
 
+def get_gnome_backgrounds_dir():
+    """
+    Возвращает директорию обоев GNOME (~/.local/share/backgrounds).
+    Обои, скопированные сюда, отображаются в меню «Параметры → Внешний вид → Обои».
+
+    Returns:
+        str or None: Абсолютный путь к папке backgrounds или None в случае ошибки.
+    """
+    base = GLib.get_user_data_dir()
+    if not base:
+        return None
+    bg_dir = os.path.join(base, "backgrounds")
+    if not os.path.exists(bg_dir):
+        try:
+            os.makedirs(bg_dir, exist_ok=True)
+        except OSError as e:
+            print(f"Ошибка создания папки обоев GNOME: {e}")
+            return None
+    return bg_dir
+
+
 def extract_wallpaper_id(filename):
     """
     Извлекает ID обоев из имени файла.

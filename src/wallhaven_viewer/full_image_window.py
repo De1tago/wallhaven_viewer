@@ -2,13 +2,14 @@
 Модуль окна полноразмерного просмотра обоев.
 """
 import os
+import shutil
 import threading
 import time
 import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, Gdk, Gio, GLib, GdkPixbuf
 
-from wallhaven_viewer.utils import resolve_path, get_sidecar_path_for_image, wallpaper_portal_available
+from wallhaven_viewer.utils import resolve_path, get_gnome_backgrounds_dir, get_sidecar_path_for_image, wallpaper_portal_available
 from wallhaven_viewer.image_loader import ImageLoader
 from wallhaven_viewer.api import WallhavenAPI
 from gi.repository import Gtk as _Gtk
@@ -493,6 +494,7 @@ class FullImageWindow(Gtk.Window):
                 self.save_btn.set_label("Скачано")
                 self.save_btn.set_sensitive(False)
                 self.set_wp_btn.set_sensitive(True)
+                self._copy_to_gnome_backgrounds_if_enabled(local_path)
 
                 # Обновляем список скачанных файлов в главном окне
                 self.parent_window.scan_downloaded_wallpapers()
@@ -528,6 +530,7 @@ class FullImageWindow(Gtk.Window):
                 self.save_btn.set_label("Скачано")
                 self.save_btn.set_sensitive(False)
                 self.set_wp_btn.set_sensitive(True)
+                self._copy_to_gnome_backgrounds_if_enabled(local_path)
 
                 # Обновляем список скачанных файлов в главном окне
                 self.parent_window.scan_downloaded_wallpapers()
@@ -554,6 +557,20 @@ class FullImageWindow(Gtk.Window):
                 json.dump(meta, sf, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"Не удалось записать sidecar: {e}")
+
+    def _copy_to_gnome_backgrounds_if_enabled(self, image_path):
+        """Если в настройках включено — копирует файл в ~/.local/share/backgrounds."""
+        if not getattr(self.parent_window, 'settings', {}).get('copy_to_gnome_backgrounds') == 'true':
+            return
+        bg_dir = get_gnome_backgrounds_dir()
+        if not bg_dir or not image_path or not os.path.exists(image_path):
+            return
+        try:
+            dest = os.path.join(bg_dir, os.path.basename(image_path))
+            shutil.copy2(image_path, dest)
+            print(f"✅ Скопировано в меню обоев GNOME: {dest}")
+        except Exception as e:
+            print(f"Ошибка копирования в меню обоев GNOME: {e}")
 
     from wallhaven_viewer.utils import wallpaper_portal_available
 
