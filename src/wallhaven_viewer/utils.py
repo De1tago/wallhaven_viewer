@@ -109,10 +109,14 @@ def get_gnome_backgrounds_dir():
     Возвращает директорию обоев GNOME (~/.local/share/backgrounds).
     Обои, скопированные сюда, отображаются в меню «Параметры → Внешний вид → Обои».
 
-    Returns:
-        str or None: Абсолютный путь к папке backgrounds или None в случае ошибки.
+    В Flatpak GLib.get_user_data_dir() указывает на песочницу приложения,
+    а не на реальный ~/.local/share, поэтому для Flatpak используем явный путь.
     """
-    base = GLib.get_user_data_dir()
+    if os.environ.get("FLATPAK_ID"):
+        # В Flatpak пишем в реальный каталог пользователя (доступ есть при --filesystem=home)
+        base = os.path.join(os.path.expanduser("~"), ".local", "share")
+    else:
+        base = GLib.get_user_data_dir()
     if not base:
         return None
     bg_dir = os.path.join(base, "backgrounds")
