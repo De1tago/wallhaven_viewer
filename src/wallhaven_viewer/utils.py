@@ -2,6 +2,7 @@
 Утилиты для работы с путями, кэшем и файловой системой.
 """
 
+import hashlib
 import os
 import sys
 from gi.repository import GLib
@@ -61,6 +62,46 @@ def get_cache_dir():
             print(f"Ошибка создания папки кэша: {e}")
             return None
     return cache_dir
+
+
+def get_meta_dir():
+    """
+    Возвращает директорию для хранения sidecar-метаданных (JSON) к скачанным обоям.
+    Файлы метаданных хранятся здесь, а не рядом с изображениями.
+
+    Returns:
+        str or None: Абсолютный путь к папке meta или None в случае ошибки.
+    """
+    base = get_cache_dir()
+    if not base:
+        return None
+    meta_dir = os.path.join(base, "meta")
+    if not os.path.exists(meta_dir):
+        try:
+            os.makedirs(meta_dir, exist_ok=True)
+        except OSError as e:
+            print(f"Ошибка создания папки метаданных: {e}")
+            return None
+    return meta_dir
+
+
+def get_sidecar_path_for_image(image_path):
+    """
+    Возвращает путь к JSON-файлу метаданных для данного изображения.
+    Файл хранится в отдельной директории (кэш), а не рядом с изображением.
+
+    Args:
+        image_path (str): Путь к файлу изображения.
+
+    Returns:
+        str or None: Абсолютный путь к .json файлу или None если директория метаданных недоступна.
+    """
+    meta_dir = get_meta_dir()
+    if not meta_dir:
+        return None
+    abs_path = os.path.abspath(image_path)
+    key = hashlib.sha256(abs_path.encode("utf-8")).hexdigest()
+    return os.path.join(meta_dir, key + ".json")
 
 
 def extract_wallpaper_id(filename):

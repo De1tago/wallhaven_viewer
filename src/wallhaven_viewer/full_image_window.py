@@ -8,7 +8,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, Gdk, Gio, GLib, GdkPixbuf
 
-from wallhaven_viewer.utils import resolve_path, wallpaper_portal_available
+from wallhaven_viewer.utils import resolve_path, get_sidecar_path_for_image, wallpaper_portal_available
 from wallhaven_viewer.image_loader import ImageLoader
 from wallhaven_viewer.api import WallhavenAPI
 from gi.repository import Gtk as _Gtk
@@ -183,12 +183,12 @@ class FullImageWindow(Gtk.Window):
                 with open(self.local_path, 'rb') as f:
                     self.image_data = f.read()
 
-                # Попробуем сначала прочитать sidecar рядом с локальным файлом
+                # Попробуем прочитать sidecar из директории метаданных (не рядом с файлом)
                 resolution = ""
                 try:
                     import json
-                    sidecar = self.local_path + '.meta.json'
-                    if os.path.exists(sidecar):
+                    sidecar = get_sidecar_path_for_image(self.local_path)
+                    if sidecar and os.path.exists(sidecar):
                         #print(f"✅ sidecar found for local image: {sidecar} (instance id={id(self)})")
                         with open(sidecar, 'r', encoding='utf-8') as sf:
                             j = json.load(sf)
@@ -537,17 +537,19 @@ class FullImageWindow(Gtk.Window):
 
     def _write_sidecar(self, image_path):
         """
-        Записывает sidecar JSON-файл рядом с изображением, содержащий
-        `_meta_info` и `_pending_tags`, чтобы при открытии локального файла
+        Записывает sidecar JSON-файл в отдельную директорию метаданных (не рядом с изображением),
+        содержащий `_meta_info` и `_pending_tags`, чтобы при открытии локального файла
         можно было восстановить метаданные без обращения к API.
         """
         try:
             import json
+            sidecar_path = get_sidecar_path_for_image(image_path)
+            if not sidecar_path:
+                return
             meta = {
                 'meta': self._meta_info,
                 'tags': self._pending_tags,
             }
-            sidecar_path = image_path + '.meta.json'
             with open(sidecar_path, 'w', encoding='utf-8') as sf:
                 json.dump(meta, sf, ensure_ascii=False, indent=2)
         except Exception as e:
