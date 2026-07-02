@@ -210,6 +210,32 @@ class MainWindow(Adw.ApplicationWindow):
         self.downloaded_ids = set(self.downloaded_files.keys())
         print(f"✅ Найдено скачанных обоев: {len(self.downloaded_ids)}")
 
+    def refresh_downloaded_state_in_ui(self):
+        """
+        Обновляет визуальное состояние 'скачано' у всех видимых превью,
+        не перезагружая миниатюры заново.
+        Всегда вызывать ПОСЛЕ scan_downloaded_wallpapers().
+        """
+        child = self.flowbox.get_first_child()
+        while child:
+            if isinstance(child, Gtk.FlowBoxChild):
+                btn = child.get_child()
+            else:
+                btn = child
+            wallpaper_id = getattr(btn, 'wallhaven_wallpaper_id', None)
+            if wallpaper_id:
+                is_downloaded = wallpaper_id in self.downloaded_ids
+                if is_downloaded:
+                    btn.add_css_class("downloaded")
+                    btn.wallhaven_local_path = self.downloaded_files.get(wallpaper_id)
+                else:
+                    btn.remove_css_class("downloaded")
+                    btn.wallhaven_local_path = None
+                indicator = getattr(btn, '_download_indicator', None)
+                if indicator is not None:
+                    indicator.set_visible(is_downloaded)
+            child = child.get_next_sibling()
+
     def on_downloaded_toggle(self, btn):
         """
         Обработчик кнопки "Только скачанные".
@@ -447,14 +473,17 @@ class MainWindow(Adw.ApplicationWindow):
             picture.set_size_request(-1, target_height)
             overlay.set_child(picture)
 
-            if wallpaper_id in self.downloaded_ids:
-                icon = Gtk.Image.new_from_icon_name("media-floppy-symbolic")
-                icon.add_css_class("download-indicator")
-                icon.set_halign(Gtk.Align.END)
-                icon.set_valign(Gtk.Align.END)
-                icon.set_margin_end(10)
-                icon.set_margin_bottom(10)
-                overlay.add_overlay(icon)
+            icon = Gtk.Image.new_from_icon_name("media-floppy-symbolic")
+            icon.add_css_class("download-indicator")
+            icon.set_halign(Gtk.Align.END)
+            icon.set_valign(Gtk.Align.END)
+            icon.set_margin_end(10)
+            icon.set_margin_bottom(10)
+            icon.set_visible(wallpaper_id in self.downloaded_ids)
+            overlay.add_overlay(icon)
+
+            btn.wallhaven_wallpaper_id = wallpaper_id
+            btn._download_indicator = icon
 
             btn.set_child(overlay)
         except Exception as e:
@@ -554,6 +583,7 @@ class MainWindow(Adw.ApplicationWindow):
         btn.add_css_class("thumbnail")
 
         btn.wallhaven_local_path = local_path
+        btn.wallhaven_wallpaper_id = wallpaper_id
 
         s = Adw.Spinner()
         s.set_halign(Gtk.Align.CENTER)

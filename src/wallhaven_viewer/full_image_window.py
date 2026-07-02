@@ -498,7 +498,7 @@ class FullImageWindow(Gtk.Window):
 
                 # Обновляем список скачанных файлов в главном окне
                 self.parent_window.scan_downloaded_wallpapers()
-                self.parent_window.flowbox.invalidate_filter()
+                self.parent_window.refresh_downloaded_state_in_ui()
 
             except Exception:
                 self.open_dialog(name)
@@ -534,7 +534,7 @@ class FullImageWindow(Gtk.Window):
 
                 # Обновляем список скачанных файлов в главном окне
                 self.parent_window.scan_downloaded_wallpapers()
-                self.parent_window.flowbox.invalidate_filter()
+                self.parent_window.refresh_downloaded_state_in_ui()
         except Exception as e:
             print(f"Ошибка сохранения: {e}")
 
