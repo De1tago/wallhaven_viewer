@@ -37,7 +37,19 @@ def resolve_path(filename: str) -> str:
         flatpak_base / "ui" / filename,
     ]
 
-    # 3. исторический — рядом с .py
+    # 3. внутри PyInstaller --onefile
+    if hasattr(sys, '_MEIPASS'):
+        mp = pathlib.Path(sys._MEIPASS)
+        candidates += [
+            mp / "data" / filename,
+            mp / "data" / "css" / filename,
+            mp / "data" / "ui" / filename,
+            mp / filename,
+            mp / "css" / filename,
+            mp / "ui" / filename,
+        ]
+
+    # 4. исторический — рядом с .py
     candidates.append(here / filename)
 
     for path in candidates:
