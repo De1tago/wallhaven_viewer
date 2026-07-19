@@ -157,7 +157,7 @@ class MainWindow(Adw.ApplicationWindow):
             self.start_new_search(query)
             self.present()
         except Exception as e:
-            print(f"Ошибка при запуске поиска по тегу: {e}")
+            self.show_infobar(f"Ошибка поиска: {e}")
 
     def setup_menu_actions(self):
         """Создает меню и привязывает действия (Actions)."""
@@ -193,7 +193,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         download_path = self.settings.get('download_path', '')
         if not download_path or not os.path.isdir(download_path):
-            print(f"❌ Папка для загрузок не задана или не существует: {download_path}")
+            self.show_infobar("Папка для загрузок не задана или не существует")
             return
 
         print(f"🔍 Сканируем папку: {download_path}")
@@ -634,7 +634,7 @@ class MainWindow(Adw.ApplicationWindow):
             data, meta = WallhavenAPI.search_wallpapers(query, page, search_settings)
 
             if data is None:
-                GLib.idle_add(self.show_infobar, "Ошибка API")
+                GLib.idle_add(self.show_infobar, "Ошибка загрузки: проверьте подключение к интернету и повторите попытку")
                 GLib.idle_add(self.finish_loading_page, False)
                 return
 

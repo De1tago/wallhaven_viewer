@@ -32,8 +32,7 @@ class ImageLoader:
             loader.write(img_bytes)
             loader.close()
             return loader.get_pixbuf()
-        except Exception as e:
-            print(f"Ошибка создания Pixbuf: {e}")
+        except Exception:
             return None
 
     @staticmethod
@@ -63,8 +62,7 @@ class ImageLoader:
                         GLib.idle_add(progress_callback, current_bytes, total_bytes)
 
                 GLib.idle_add(callback, image_data)
-            except Exception as e:
-                print(f"Ошибка загрузки изображения {url}: {e}")
+            except Exception:
                 GLib.idle_add(callback, None)
 
         threading.Thread(target=worker, daemon=True).start()
@@ -125,8 +123,8 @@ class ImageLoader:
                         if pixbuf and callback:
                             GLib.idle_add(callback, pixbuf)
                             return
-                except Exception as e:
-                    print(f"❌ Ошибка локальной загрузки {local_path}: {type(e).__name__}: {e}")
+                except Exception:
+                    pass
 
             # 2. КЭШ
             if pixbuf is None and cache_path and os.path.exists(cache_path):
@@ -138,8 +136,8 @@ class ImageLoader:
                             pixbuf = p.scale_simple(
                                 target_width, target_height, GdkPixbuf.InterpType.BILINEAR
                             )
-                except Exception as e:
-                    print(f"❌ Ошибка кэша {cache_path}: {e}")
+                except Exception:
+                    pass
 
             # 3. СЕТЬ
             if pixbuf is None and thumb_url:
@@ -159,10 +157,10 @@ class ImageLoader:
                                 try:
                                     with open(cache_path, "wb") as f:
                                         f.write(img_data)
-                                except Exception as e:
-                                    print(f"⚠️ Не удалось сохранить кэш: {e}")
-                except Exception as e:
-                    print(f"❌ Ошибка сети {thumb_url}: {e}")
+                                except Exception:
+                                    pass
+                except Exception:
+                    pass
 
             # Финальный вызов
             if callback:

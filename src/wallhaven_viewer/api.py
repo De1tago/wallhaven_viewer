@@ -82,8 +82,7 @@ class WallhavenAPI:
             resp.raise_for_status()
             json_data = resp.json()
             return json_data.get("data", []), json_data.get("meta", {})
-        except Exception as e:
-            print(f"Ошибка API поиска: {e}")
+        except Exception:
             return None, None
 
     @staticmethod
@@ -103,23 +102,15 @@ class WallhavenAPI:
             resp = requests.get(info_url, timeout=timeout)
             try:
                 resp.raise_for_status()
-            except Exception as e:
-                print(f"Wallhaven API error: {e} (status={getattr(resp, 'status_code', 'N/A')}) url={info_url}")
-                # print response text for debugging
-                try:
-                    print(f"Response text: {resp.text}")
-                except Exception:
-                    pass
+            except Exception:
                 return None
             # Parse json
             j = resp.json()
             data = j.get("data") if isinstance(j, dict) else None
             if not data:
-                print(f"Wallhaven API: no data for wallpaper {wallpaper_id}")
                 return None
             return data
-        except Exception as e:
-            print(f"Wallhaven API request failed: {e}")
+        except Exception:
             return None
 
     @staticmethod

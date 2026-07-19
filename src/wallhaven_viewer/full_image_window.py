@@ -58,9 +58,6 @@ class FullImageWindow(Gtk.Window):
         if not content:
             raise RuntimeError("root container not found in fullimage.ui")
 
-        # Устанавливаем root как дочерний элемент окна
-        self.set_child(content)
-
         xml_window = builder.get_object("full_image_window")
 
         w, h = xml_window.get_default_size()
@@ -69,8 +66,26 @@ class FullImageWindow(Gtk.Window):
 
         content = xml_window.get_child()
         if content:
-            content.unparent()  # Это критически важно!
-            self.set_child(content)
+            content.unparent()
+            overlay = Gtk.Overlay()
+            overlay.set_child(content)
+
+            self._error_bar = Gtk.InfoBar()
+            self._error_bar.set_visible(False)
+            self._error_bar.add_css_class("error")
+            self._error_bar.set_halign(Gtk.Align.CENTER)
+            self._error_bar.set_valign(Gtk.Align.START)
+            self._error_bar.set_margin_top(10)
+            self._error_bar.set_margin_start(10)
+            self._error_bar.set_margin_end(10)
+            self._error_bar.set_show_close_button(True)
+            self._error_bar.connect("response", lambda bar, resp: bar.set_visible(False))
+
+            self._error_label = Gtk.Label()
+            self._error_bar.add_child(self._error_label)
+
+            overlay.add_overlay(self._error_bar)
+            self.set_child(overlay)
 
         self.picture = builder.get_object("picture")
         self.spinner = builder.get_object("spinner")
@@ -147,6 +162,14 @@ class FullImageWindow(Gtk.Window):
                 self.meta_label.connect('activate-link', self.on_meta_activate_link)
         except Exception:
             pass
+    def show_error(self, message):
+        GLib.idle_add(self._show_error_ui, message)
+
+    def _show_error_ui(self, message):
+        self._error_label.set_text(message)
+        self._error_bar.set_visible(True)
+        GLib.timeout_add_seconds(5, lambda: self._error_bar.set_visible(False))
+
     def update_progress(self, current_bytes, total_bytes):
         """
         Обновляет прогресс-бар во время загрузки полноразмерного изображения.
@@ -208,10 +231,8 @@ class FullImageWindow(Gtk.Window):
                                 wallpaper_info = WallhavenAPI.get_wallpaper_info(self.wallpaper_id)
                                 if wallpaper_info:
                                     break
-                                else:
-                                    print(f"⚠️ wallpaper_info empty on attempt {attempt}")
-                            except Exception as e:
-                                print(f"Ошибка при запросе wallpaper_info (local_mode attempt {attempt}): {e}")
+                            except Exception:
+                                pass
                             if attempt < 3:
                                 time.sleep(0.6)
 
@@ -250,18 +271,17 @@ class FullImageWindow(Gtk.Window):
                             try:
                                 with open(sidecar, 'w', encoding='utf-8') as sf:
                                     json.dump({'meta': self._meta_info, 'tags': self._pending_tags}, sf, ensure_ascii=False, indent=2)
-                                print(f"✅ Wrote sidecar for local image: {sidecar} (instance id={id(self)})")
-                            except Exception as e:
-                                print(f"Не удалось записать sidecar: {e}")
+                            except Exception:
+                                pass
                         else:
                             self._pending_tags = []
-                except Exception as e:
-                    print(f"Ошибка при чтении/записи sidecar для локального файла: {e}")
+                except Exception:
+                    pass
 
                 GLib.idle_add(self.update_title, resolution)
                 #print(f"load_image_and_info finished (instance id={id(self)}), _meta_info set={'yes' if self._meta_info else 'no'}, tags_count={len(self._pending_tags) if self._pending_tags else 0}")
             except Exception as e:
-                print(f"Ошибка чтения локального файла: {e}")
+                self.show_error(f"Ошибка чтения файла: {e}")
                 self.image_data = None
         else:
             # 2) Получаем метаданные от API с ретраем
@@ -271,8 +291,8 @@ class FullImageWindow(Gtk.Window):
                     wallpaper_info = WallhavenAPI.get_wallpaper_info(self.wallpaper_id)
                     if wallpaper_info:
                         break
-                except Exception as e:
-                    print(f"Ошибка при запросе wallpaper_info (attempt {attempt}): {e}")
+                except Exception:
+                    pass
                 if attempt < 3:
                     time.sleep(0.6)
 
@@ -324,7 +344,7 @@ class FullImageWindow(Gtk.Window):
                         if pixbuf:
                             GLib.idle_add(self.update_image, pixbuf)
                     except Exception as e:
-                        print(f"Ошибка при обработке изображения: {e}")
+                        self.show_error(f"Ошибка обработки изображения: {e}")
                         GLib.idle_add(lambda: self.progress_bar.set_visible(False))
                 else:
                     GLib.idle_add(lambda: self.spinner.set_visible(False))
@@ -344,8 +364,7 @@ class FullImageWindow(Gtk.Window):
                 pixbuf = ImageLoader.load_pixbuf_from_bytes(self.image_data)
                 if pixbuf:
                     GLib.idle_add(self.update_image, pixbuf)
-            except Exception as e:
-                print(f"Ошибка: {e}")
+            except Exception:
                 GLib.idle_add(lambda: self.progress_bar.set_visible(False))
 
     def populate_tags(self, tags):
@@ -536,7 +555,7 @@ class FullImageWindow(Gtk.Window):
                 self.parent_window.scan_downloaded_wallpapers()
                 self.parent_window.refresh_downloaded_state_in_ui()
         except Exception as e:
-            print(f"Ошибка сохранения: {e}")
+            self.show_error(f"Ошибка сохранения: {e}")
 
     def _write_sidecar(self, image_path):
         """
@@ -570,13 +589,13 @@ class FullImageWindow(Gtk.Window):
             shutil.copy2(image_path, dest)
             print(f"✅ Скопировано в меню обоев GNOME: {dest}")
         except Exception as e:
-            print(f"Ошибка копирования в меню обоев GNOME: {e}")
+            self.show_error(f"Ошибка копирования в меню обоев GNOME: {e}")
 
     from wallhaven_viewer.utils import wallpaper_portal_available
 
     def on_set_wallpaper_clicked(self, _btn):
         if not self.local_path or not os.path.exists(self.local_path):
-            print("❌ Нет локального файла — нельзя установить обои")
+            self.show_error("Нет локального файла — нельзя установить обои")
             return
 
         used_portal = False
@@ -623,7 +642,7 @@ class FullImageWindow(Gtk.Window):
             schema = schema_source.lookup('org.gnome.desktop.background', True)
 
             if not schema:
-                print("❌ Схема org.gnome.desktop.background не найдена")
+                self.show_error("Схема org.gnome.desktop.background не найдена")
                 return
 
             # Устанавливаем обои
@@ -636,7 +655,7 @@ class FullImageWindow(Gtk.Window):
                 print(f"✅ Обои установлены: {file_uri}")
 
         except Exception as e:
-            print(f"❌ Ошибка установки обоев: {type(e).__name__}: {e}")
+            self.show_error(f"Ошибка установки обоев: {e}")
             import traceback
             traceback.print_exc()
 
